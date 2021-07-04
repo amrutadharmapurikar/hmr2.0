@@ -129,8 +129,12 @@ def get_original(params, verts, cam, joints):
     return vert_shifted, kp_original  # , cam_for_render
 
 
-def preprocess_image(img_path, img_size):
-    img = cv2.imread(img_path)
+
+
+# just pass an image instead of the image path
+# this makes it possible to run the model on an image that isn't saved
+def preprocess_image(img, img_size):
+
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     scale = 1.
