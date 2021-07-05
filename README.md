@@ -1,5 +1,10 @@
 # Domain Analysis of End-to-end Recovery of Human Shape and Pose
 
+
+THINGS TO NOTE: delete the logs folder, and create a "paired" folder (if you're running the paired model). then, inside the "paired" folder, download and unpack the model. to render the mesh + joints, use export MLPBACKEND=WebAgg
+
+**********
+
 This repository is part of the master thesis with the title: "Analysis of Domain Adaptability for 3D Human Pose Estimation with Explicit 
 Body Shape Models" based on [End-to-end Recovery of Human Shape and Pose](https://akanazawa.github.io/hmr).
 
