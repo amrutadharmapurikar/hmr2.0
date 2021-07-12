@@ -3,6 +3,7 @@ import os
 import sys
 import cv2
 import numpy as np
+import glog as log
 
 # to make run from console for module import
 sys.path.append(os.path.abspath('..'))
@@ -24,36 +25,39 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
-def process(img, do_render, joints_csv):
+def process(img, do_render, joints_csv, bad_good):
+    assert (img is not None)
     original_img, input_img, params = preprocess_image(img, config.ENCODER_INPUT_SHAPE[0])
     result = model.detect(input_img)
     cam = np.squeeze(result['cam'].numpy())[:3]
     vertices = np.squeeze(result['vertices'].numpy())
     joints = np.squeeze(result['kp2d'].numpy())
     joints = ((joints + 1) * 0.5) * params['img_size']
+    
 
-
+    joints = np.reshape(joints, [38, 1])
+    
+    log.info(joints.shape)
 
     if do_render == True:
         renderer = TrimeshRenderer()
         visualize(renderer, original_img, params, vertices, cam, joints)
 
-    with open(joints_csv, 'a') as csvfile:
-        for joint in joints:
-            s = '%s,%s,'%(joint[0], joint[1])
-            csvfile.write(s)
-        csvfile.write('\n')
+    return joints
+
 
 
 # added an argument for a video also, so your can run the model on either a video or an image
 # splits the video into frames and runs the model on each frame
+# also an argument for whether the video is bad posture or good posture (0 or 1, respectively)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Demo HMR2.0')
 
-    parser.add_argument('--joints_csv', required = True)
+    parser.add_argument('--bad0_good1', required = True)
+    parser.add_argument('--joints_csv', required = True) 
     parser.add_argument('--render', required=False, default = True)
     parser.add_argument('--image', required=False, default = '')
-    parser.add_argument('--video', required=False, default = '')
+    parser.add_argument('--video', required=False, default = '') 
     parser.add_argument('--model', required=False, default='base_model', help="model from logs folder")
     parser.add_argument('--setting', required=False, default='paired(joints)', help="setting of the model")
     parser.add_argument('--joint_type', required=False, default='cocoplus', help="<cocoplus|custom>")
@@ -82,17 +86,42 @@ if __name__ == '__main__':
     # initialize model
     model = Model()
 
+
+    bad_good = args.bad0_good1
+
     if args.video != '':
         cap = cv2.VideoCapture(args.video)
         success,image = cap.read()
-        process(image, args.render, args.joints_csv)
+        joints_video = np.empty([38, 1])
+        joints_frame = process(image, args.render, args.joints_csv, bad_good)
+        joints_video = np.concatenate((joints_video, joints_frame), axis=0)
         count = 0
+        csvfile = open(args.joints_csv, 'a')
         while success:
             success,image = cap.read()
+            if success == False:
+                break
             #print('Read a new frame: ', success)
             #if count % 10 == 0:
-            process(image, args.render, args.joints_csv)
+            joints_frame = process(image, args.render, args.joints_csv, bad_good)
+            
+            row = ''
+            for i in range(joints_frame.shape[0]):
+                row += '%s'%joints_frame[i, 0] + ','
+            row += '%s'%bad_good
+            log.info(row)
+            csvfile.write(row + '\n')
             count += 1
+        csvfile.close()
+
+        #print('---------')
+        #print(joints_video)
+        #print('==========')
+        #print(joints_video.shape)
+            
+        
+
+    
 
     
 
